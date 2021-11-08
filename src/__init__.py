@@ -1,0 +1,1 @@
+from .firefox_login_decryptor import FirefoxLoginDecryptor
