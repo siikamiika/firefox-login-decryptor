@@ -5,7 +5,6 @@ Implementation based on https://github.com/lclevy/firepwd
 """
 
 import json
-import getpass
 import sqlite3
 import base64
 import hashlib
