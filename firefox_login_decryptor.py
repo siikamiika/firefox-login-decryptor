@@ -58,22 +58,22 @@ class FirefoxLoginDecryptor:
             yield row["hostname"], username.decode("utf-8"), password.decode("utf-8")
 
     def _decrypt_login_field(self, data, key):
-        key_id, iv, ciphertext = self._decode_login_field(data)
-        assert key_id == FirefoxLoginDecryptor._CKA_ID
-        return self._decrypt_des3(key, iv, ciphertext)
+        iv, ciphertext = self._decode_login_field(data)
+        return unpad(DES3.new(key, DES3.MODE_CBC, iv).decrypt(ciphertext), 8)
 
     def _decode_login_field(self, data):
         asn1data = asn1der_decoder.decode(base64.b64decode(data))
         key_id = asn1data[0][0].asOctets()
+        assert key_id == FirefoxLoginDecryptor._CKA_ID
         iv = asn1data[0][1][1].asOctets()
         ciphertext = asn1data[0][2].asOctets()
-        return key_id, iv, ciphertext
+        return iv, ciphertext
 
     def _decrypt_pbe(self, data, master_password, global_salt):
         salt, iteration_count, key_length, iv, ciphertext = self._decode_pbe(data)
         pw = hashlib.sha1(global_salt + master_password).digest()
         key = hashlib.pbkdf2_hmac("sha256", pw, salt, iteration_count, dklen=key_length)
-        return self._decrypt_aes(key, iv, ciphertext)
+        return AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
 
     def _decode_pbe(self, data):
         asn1data = asn1der_decoder.decode(data)
@@ -95,9 +95,3 @@ class FirefoxLoginDecryptor:
         ciphertext = asn1data[0][1].asOctets()
 
         return salt, iteration_count, key_length, iv, ciphertext
-
-    def _decrypt_des3(self, key, iv, ciphertext):
-        return unpad(DES3.new(key, DES3.MODE_CBC, iv).decrypt(ciphertext), 8)
-
-    def _decrypt_aes(self, key, iv, ciphertext):
-        return AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
